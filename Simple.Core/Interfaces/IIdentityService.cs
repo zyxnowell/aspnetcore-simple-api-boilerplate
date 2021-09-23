@@ -9,5 +9,6 @@ namespace Simple.Core.Interfaces
     {
         Task<BoolResult> AddUser(SetUserModel model);
         Task<List<IdentityRole>> GetAllRoles();
+        Task<AuthenticateResult> Authenticate(AuthenticateModel inputs);
     }
 }

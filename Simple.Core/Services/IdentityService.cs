@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using Simple.Intrastructure.Context;
 using Simple.Intrastructure.Entities;
 using Simple.Core.Models;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Simple.Core.Services
 {
@@ -92,5 +95,122 @@ namespace Simple.Core.Services
                 return null;
             }
         }
+
+
+        /// <summary>
+        /// Use this to generate JWT to authenticate user in the api 
+        /// </summary>
+        public async Task<AuthenticateResult> Authenticate(AuthenticateModel inputs)
+        {
+
+            try
+            {
+                var normalizedUserName = inputs.UserName.ToUpper();
+
+                var signin = await _signInManager.PasswordSignInAsync(normalizedUserName, inputs.Password, false, false);
+
+                if (signin.Succeeded)
+                {
+
+                    var user = await _userManager.FindByNameAsync(normalizedUserName);
+
+                    if (user.IsArchived)
+                        return null;
+
+                    var checkPasswordResult = await _signInManager.CheckPasswordSignInAsync(
+                        user,
+                        inputs.Password,
+                        false);
+
+                    if (checkPasswordResult.Succeeded)
+                    {
+
+                        var jwtToken = await GenerateToken(user, inputs.KeepLoggedIn);
+
+                        var role = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
+
+                        return new AuthenticateResult
+                        {
+                            Token = jwtToken,
+                            Email = user.Email,
+                            FullName = $"{user.FirstName} {user.LastName}",
+                            Role = role
+                        };
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+
+                return null;
+            }
+        }
+
+
+        #region private methods
+        private async Task<string> GenerateToken(AppUser user, bool KeepLoggedIn = false)
+        {
+            var utcStart = DateTime.UtcNow;
+
+            //INFO: 7 days expiry if keepLoggedIn, else 1 day
+            var expiration = utcStart.AddDays(KeepLoggedIn ? Convert.ToInt32(7) : Convert.ToInt32(1));
+
+            var claims = await GetClaims(user);
+
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            var issuer = _config["Jwt:Issuer"];
+
+            ClaimsIdentity claimsIdentity = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.NameIdentifier, user.Id)
+            });
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Issuer = issuer,
+                Audience = issuer,
+                Subject = new ClaimsIdentity(claims),
+                Expires = expiration,
+                SigningCredentials = credentials,
+                IssuedAt = DateTime.Now
+            };
+
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+
+            var token = tokenHandler.WriteToken((JwtSecurityToken)tokenHandler.CreateToken(tokenDescriptor));
+
+            return token;
+        }
+
+        private async Task<List<Claim>> GetClaims(AppUser user)
+        {
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var claims = await _userManager.GetClaimsAsync(user);
+
+            var claimIdentities = new List<Claim> {
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.NameIdentifier, user.Id)
+            };
+
+            foreach (var role in roles)
+            {
+
+                claimIdentities.Add(new Claim(ClaimTypes.Role, role));
+
+                claimIdentities.AddRange(claims.Select(claim => new Claim(claim.Type, claim.Value)));
+            }
+
+            return claimIdentities;
+        }
+        #endregion
     }
 }
