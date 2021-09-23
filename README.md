@@ -1,2 +1,2 @@
 # aspnetcore-simple-api-boilerplate
-simple aspnetcore api with identity
+simple aspnetcore 5.0 api with identity
