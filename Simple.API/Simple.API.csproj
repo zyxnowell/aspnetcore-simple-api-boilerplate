@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Simple.Core\Simple.Core.csproj" />
-    <ProjectReference Include="..\Simple.Intrastructure\Simple.Infrastructure.csproj" />
+    <ProjectReference Include="..\Simple.Infrastructure\Simple.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
