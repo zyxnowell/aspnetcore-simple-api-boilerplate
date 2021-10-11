@@ -21,11 +21,11 @@ namespace Simple.API.Configs
             services.AddDbContext<AppDBContext>(options =>
                 options.UseSqlServer(connectionString));
 
-            services.AddDbContext<IdentityDBContext>(options =>
+            services.AddDbContext<AppDBContext>(options =>
                 options.UseSqlServer(connectionString));
 
             services.AddIdentity<AppUser, IdentityRole>(SetupAction())
-                .AddEntityFrameworkStores<IdentityDBContext>()
+                .AddEntityFrameworkStores<AppDBContext>()
                 .AddDefaultTokenProviders()
                 .AddUserManager<UserManager<AppUser>>();
 
