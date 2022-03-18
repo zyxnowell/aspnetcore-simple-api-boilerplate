@@ -11,8 +11,6 @@ Based on Microsoft's [Common web application architecture](https://docs.microsof
 
 `Add-Migration "Initial Migration"`
 
-`Update-Database -Context IdentityDBContext`
-
 `Update-Database -Context AppDBContext`
 
 4. Run app and access swagger by adding `/swagger` to the base url (example: `http://localhost:3333/swagger`)
